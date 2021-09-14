@@ -1,9 +1,9 @@
 {
-  "name": "dapptools-template",
-  "author": "Georgios Konstantopoulos",
-  "license": "Unlicense",
+  "name": "memeonacci",
+  "author": "NonFungibleSequences",
+  "license": "MIT",
   "version": "1.0.0",
-  "description": "A template for building dapptools projects",
+  "description": "An experiment.",
   "files": [
     "*.sol"
   ],
