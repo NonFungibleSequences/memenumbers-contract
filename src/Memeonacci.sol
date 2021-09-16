@@ -16,9 +16,10 @@ library Errors {
 contract Memeonacci is ERC721, Ownable {
     uint256 constant AUCTION_START_PRICE = 1 ether;
     uint256 constant AUCTION_DURATION = 2 hours;
+    uint256 constant BATCH_SIZE = 7;
 
     uint256 auctionStarted;
-    uint256[] forSale;
+    uint256[BATCH_SIZE] forSale;
 
     constructor() ERC721("Memeonacci Numeric Sequence", "MEMENUM") {
         refresh();
@@ -33,7 +34,7 @@ contract Memeonacci is ERC721, Ownable {
         auctionStarted = block.timestamp;
 
         // XXX: Implement some RNG goodness here.
-        forSale = uint256[](123, 456, 789, 1000);
+        forSale = [123, 456, 789, 1000];
     }
 
 
@@ -42,13 +43,13 @@ contract Memeonacci is ERC721, Ownable {
     function currentPrice() view public returns(uint256) {
         // Linear price reduction from AUCTION_START_PRICE to 0
         uint256 endTime = (auctionStarted + AUCTION_DURATION);
-        if (block.now >= endTime) {
+        if (block.timestamp >= endTime) {
             return 0;
         }
-        return AUCTION_START_PRICE * ((block.now - endTime) / AUCTION_DURATION);
+        return AUCTION_START_PRICE * ((block.timestamp - endTime) / AUCTION_DURATION);
     }
 
-    function isForSale(uint256 num) view public bool {
+    function isForSale(uint256 num) view public returns (bool) {
         for (uint256 i=0; i<forSale.length; i++) {
             if (forSale[i] == num) return true;
         }
@@ -62,7 +63,7 @@ contract Memeonacci is ERC721, Ownable {
      * @param num1 Number to burn, must own
      * @param num2 Number to burn, must own
      */
-    function operate(uint256 num1, string calldata op, uint256 num2) pure returns (uint256) {
+    function operate(uint256 num1, string calldata op, uint256 num2) public pure returns (uint256) {
         if (op == "add") {
             return num1 + num2;
         }
@@ -102,7 +103,7 @@ contract Memeonacci is ERC721, Ownable {
      * @param op Operation to burn num1 and num2 with, one of: add, sub, mul, div
      * @param num2 Number to burn, must own
      */
-    function burn(address to, uint256 num1, string calldata op, uint256 num2) {
+    function burn(address to, uint256 num1, string calldata op, uint256 num2) external {
         require(ownerOf(num1) == _msgSender(), Errors.MustOwnNum);
         require(ownerOf(num2) == _msgSender(), Errors.MustOwnNum);
 

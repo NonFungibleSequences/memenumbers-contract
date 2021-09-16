@@ -1,3 +1,4 @@
+with (import <nixpkgs> { });
 let
   pkgs = import (builtins.fetchGit rec {
     name = "dapptools-${rev}";
@@ -14,5 +15,7 @@ in
       pkgs.seth
       pkgs.go-ethereum-unlimited
       pkgs.hevm
+
+      nodePackages.yarn
     ];
   }
