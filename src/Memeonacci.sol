@@ -41,6 +41,9 @@ contract Memeonacci is ERC721, Ownable {
 
         // XXX: Implement some RNG goodness here.
         forSale = [123, 456, 789, 1000];
+
+        // TODO: bytes32 hash = blockhash(block.number);
+        // Take slices from hash for new batches?
     }
 
 
