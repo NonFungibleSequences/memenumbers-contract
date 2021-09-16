@@ -13,6 +13,12 @@ library Errors {
     string constant DoesNotExist = "does not exist";
 }
 
+library Util {
+    function cmp(string calldata a, string calldata b) pure public returns (bool) {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
+}
+
 contract Memeonacci is ERC721, Ownable {
     uint256 constant AUCTION_START_PRICE = 1 ether;
     uint256 constant AUCTION_DURATION = 2 hours;
@@ -59,21 +65,21 @@ contract Memeonacci is ERC721, Ownable {
     /**
      * @dev Apply a mathematical operation on two numbers, returning the
      *   resulting number. Treat this as a read-only preview of `burn`.
-     * @param op Operation to burn num1 and num2 with, one of: add, sub, mul, div
      * @param num1 Number to burn, must own
+     * @param op Operation to burn num1 and num2 with, one of: add, sub, mul, div
      * @param num2 Number to burn, must own
      */
     function operate(uint256 num1, string calldata op, uint256 num2) public pure returns (uint256) {
-        if (op == "add") {
+        if (Util.cmp(op, "add")) {
             return num1 + num2;
         }
-        if (op == "sub") {
+        if (Util.cmp(op, "sub")) {
             return num1 - num2;
         }
-        if (op == "mul") {
+        if (Util.cmp(op, "mul")) {
             return num1 * num2;
         }
-        if (op == "div") {
+        if (Util.cmp(op, "div")) {
             return num1 / num2;
         }
         revert(Errors.InvalidOp);
@@ -107,7 +113,7 @@ contract Memeonacci is ERC721, Ownable {
         require(ownerOf(num1) == _msgSender(), Errors.MustOwnNum);
         require(ownerOf(num2) == _msgSender(), Errors.MustOwnNum);
 
-        uint256 num = operate(op, num1, num2);
+        uint256 num = operate(num1, op, num2);
         require(!_exists(num), Errors.AlreadyMinted);
 
         _mint(to, num);
