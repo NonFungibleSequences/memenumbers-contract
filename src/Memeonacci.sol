@@ -24,8 +24,8 @@ contract Memeonacci is ERC721, Ownable {
     uint256 constant AUCTION_DURATION = 2 hours;
     uint256 constant BATCH_SIZE = 7;
 
-    uint256 auctionStarted;
-    uint256[BATCH_SIZE] forSale;
+    uint256 public auctionStarted;
+    uint256[BATCH_SIZE] private forSale;
 
     constructor() ERC721("Memeonacci Numeric Sequence", "MEMENUM") {
         refresh();
@@ -42,8 +42,17 @@ contract Memeonacci is ERC721, Ownable {
         // XXX: Implement some RNG goodness here.
         forSale = [123, 456, 789, 1000];
 
-        // TODO: bytes32 hash = blockhash(block.number);
-        // Take slices from hash for new batches?
+        uint256 entropy = uint256(blockhash(block.number));
+
+        // Slice it up with fibonacci bit masks: 5, 8, 13, 21, 34, 55, 89
+        // Eligibility is confirmed during sale/view
+        forSale[0] = entropy ^ (2 ** 5 - 1);
+        forSale[1] = entropy ^ (2 ** 8 - 1);
+        forSale[2] = entropy ^ (2 ** 13 - 1);
+        forSale[3] = entropy ^ (2 ** 21 - 1);
+        forSale[4] = entropy ^ (2 ** 34 - 1);
+        forSale[5] = entropy ^ (2 ** 55 - 1);
+        forSale[6] = entropy ^ (2 ** 89 - 1);
     }
 
 
@@ -63,6 +72,15 @@ contract Memeonacci is ERC721, Ownable {
             if (forSale[i] == num) return true;
         }
         return false;
+    }
+
+    function getForSale() view public returns (uint256[]) {
+        uint256[] r;
+        for (uint256 i=0; i<forSale.length; i++) {
+            if (_exists(forSale[i])) continue;
+            r[r.length] = forSale[i];
+        }
+        return r;
     }
 
     /**
