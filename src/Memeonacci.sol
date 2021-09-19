@@ -39,9 +39,10 @@ contract Memeonacci is ERC721, Ownable {
     function refresh() private {
         auctionStarted = block.timestamp;
 
-        // XXX: Implement some RNG goodness here.
-        forSale = [123, 456, 789, 1000];
-
+        // FIXME: Are we happy with this source of entropy? Miners can
+        // influence this, but they're still required to compete in the dutch
+        // auction. Perhaps we should start the dutch auction on a very high
+        // curve to price out MEV bundles.
         uint256 entropy = uint256(blockhash(block.number));
 
         // Slice it up with fibonacci bit masks: 5, 8, 13, 21, 34, 55, 89
@@ -74,8 +75,8 @@ contract Memeonacci is ERC721, Ownable {
         return false;
     }
 
-    function getForSale() view public returns (uint256[]) {
-        uint256[] r;
+    function getForSale() view public returns (uint256[] memory) {
+        uint256[] memory r;
         for (uint256 i=0; i<forSale.length; i++) {
             if (_exists(forSale[i])) continue;
             r[r.length] = forSale[i];
