@@ -19,7 +19,7 @@ library Util {
     }
 }
 
-contract Memeonacci is ERC721, Ownable {
+contract MemeNumbers is ERC721, Ownable {
     uint256 constant AUCTION_START_PRICE = 1 ether;
     uint256 constant AUCTION_DURATION = 2 hours;
     uint256 constant BATCH_SIZE = 7;
@@ -27,7 +27,7 @@ contract Memeonacci is ERC721, Ownable {
     uint256 public auctionStarted;
     uint256[BATCH_SIZE] private forSale;
 
-    constructor() ERC721("Memeonacci Numeric Sequence", "MEMENUM") {
+    constructor() ERC721("MemeNumbers", "MEMENUM") {
         refresh();
     }
 

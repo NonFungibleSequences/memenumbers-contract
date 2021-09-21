@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "./utils/MemeonacciTest.sol";
-import { Errors } from "../Memeonacci.sol";
+import "./utils/MemeNumbersTest.sol";
+import { Errors } from "../MemeNumbers.sol";
 
-contract Meme is MemeonacciTest {
+contract Meme is MemeNumbersTest {
     // TODO: ...
 
     function testMint() public {
