@@ -3,13 +3,13 @@ pragma solidity >=0.8.4;
 
 import '@openzeppelin/contracts/utils/Strings.sol';
 
-import "base64-sol/base64.sol";
-
-interface ITokenRenderer {
-    function tokenURI(IKetherHomepage instance, uint256 tokenId) external view returns (string memory);
-}
+import "base64/base64.sol";
 
 interface IMemeNumbers{
+}
+
+interface ITokenRenderer {
+    function tokenURI(IMemeNumbers instance, uint256 tokenId) external view returns (string memory);
 }
 
 contract MemeNumbersRenderer is ITokenRenderer {
@@ -29,11 +29,19 @@ contract MemeNumbersRenderer is ITokenRenderer {
     if (tokenId % 2 == 0) {
       parity = "Even";
     }
+
+    uint256 i = tokenId;
+    uint256 digits = 0;
+    while (i != 0) {
+      digits++;
+      i /= 10;
+    }
+
     return string(abi.encodePacked(
       '[',
          '{',
             '"trait_type": "Digits",',
-            '"value": ', tokenId.toString().length.toString(),
+            '"value": ', digits.toString(),
           '},',
           '{',
               '"trait_type": "Parity",',
