@@ -120,6 +120,8 @@ contract MemeNumbers is ERC721, Ownable {
         require(currentPrice() <= msg.value, Errors.UnderPriced);
         require(isForSale(num), Errors.NotForSale);
 
+        // XXX: Refund difference of currentPrice vs msg.value to allow overbidding
+
         _mint(to, num);
     }
 
