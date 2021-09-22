@@ -13,7 +13,8 @@ contract User {
     }
 
     function mint(uint256 num) public {
-        meme.mint(address(this), num);
+        uint256 price = meme.currentPrice();
+        meme.mint{ value: price }(address(this), num);
     }
 }
 
@@ -26,11 +27,15 @@ contract MemeNumbersTest is DSTest {
     // users
     User internal owner;
     User internal alice;
+    User internal bob;
 
     function setUp() public virtual {
+        hevm.roll(69);
+
         meme = new MemeNumbers();
         owner = new User(address(meme));
         alice = new User(address(meme));
+        bob = new User(address(meme));
         meme.transferOwnership(address(owner));
     }
 }

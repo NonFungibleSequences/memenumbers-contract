@@ -20,40 +20,56 @@ library Util {
 }
 
 contract MemeNumbers is ERC721, Ownable {
-    uint256 constant AUCTION_START_PRICE = 1 ether;
-    uint256 constant AUCTION_DURATION = 2 hours;
-    uint256 constant BATCH_SIZE = 7;
+    uint256 public constant AUCTION_START_PRICE = 5 ether;
+    uint256 public constant AUCTION_DURATION = 1 hours;
+    uint256 public constant BATCH_SIZE = 7;
 
     uint256 public auctionStarted;
     uint256[BATCH_SIZE] private forSale;
 
     constructor() ERC721("MemeNumbers", "MEMENUM") {
-        refresh();
+        _refresh();
     }
 
-    // Private helpers:
+    // Internal helpers:
 
-    /**
-     * @dev Generate a fresh sequence available for sale based on the current block state.
-     */
-    function refresh() private {
-        auctionStarted = block.timestamp;
-
+    function _getEntropy() view internal returns(uint256) {
         // FIXME: Are we happy with this source of entropy? Miners can
         // influence this, but they're still required to compete in the dutch
         // auction. Perhaps we should start the dutch auction on a very high
         // curve to price out MEV bundles.
-        uint256 entropy = uint256(blockhash(block.number));
+
+        // Alternative option is simply:
+        //   return return uint256(blockhash(block.number));
+
+        // Borrowed from: https://github.com/1001-digital/erc721-extensions/blob/f5c983bac8989bc5ebf9b34c03f28e438da9a7b3/contracts/RandomlyAssigned.sol#L27
+        return uint256(keccak256(
+            abi.encodePacked(
+                msg.sender,
+                block.coinbase,
+                block.difficulty,
+                block.gaslimit,
+                block.timestamp,
+                blockhash(block.number))));
+    }
+
+    /**
+     * @dev Generate a fresh sequence available for sale based on the current block state.
+     */
+    function _refresh() internal {
+        auctionStarted = block.timestamp;
+
+        uint256 entropy = _getEntropy();
 
         // Slice it up with fibonacci bit masks: 5, 8, 13, 21, 34, 55, 89
         // Eligibility is confirmed during sale/view
-        forSale[0] = entropy ^ (2 ** 5 - 1);
-        forSale[1] = entropy ^ (2 ** 8 - 1);
-        forSale[2] = entropy ^ (2 ** 13 - 1);
-        forSale[3] = entropy ^ (2 ** 21 - 1);
-        forSale[4] = entropy ^ (2 ** 34 - 1);
-        forSale[5] = entropy ^ (2 ** 55 - 1);
-        forSale[6] = entropy ^ (2 ** 89 - 1);
+        forSale[0] = (entropy >> 0) ^ (2 ** 5 - 1);
+        forSale[1] = (entropy >> 5) ^ (2 ** 8 - 1);
+        forSale[2] = (entropy >> 8) ^ (2 ** 13 - 1);
+        forSale[3] = (entropy >> 13) ^ (2 ** 21 - 1);
+        forSale[4] = (entropy >> 21) ^ (2 ** 34 - 1);
+        forSale[5] = (entropy >> 34) ^ (2 ** 55 - 1);
+        forSale[6] = (entropy >> 55) ^ (2 ** 89 - 1);
     }
 
 
@@ -65,7 +81,7 @@ contract MemeNumbers is ERC721, Ownable {
         if (block.timestamp >= endTime) {
             return 0;
         }
-        return AUCTION_START_PRICE * ((block.timestamp - endTime) / AUCTION_DURATION);
+        return AUCTION_START_PRICE * ((endTime - block.timestamp) / AUCTION_DURATION);
     }
 
     function isForSale(uint256 num) view public returns (bool) {
@@ -76,10 +92,12 @@ contract MemeNumbers is ERC721, Ownable {
     }
 
     function getForSale() view public returns (uint256[] memory) {
-        uint256[] memory r;
+        uint256[] memory r = new uint256[](BATCH_SIZE);
+        uint256 count = 0;
         for (uint256 i=0; i<forSale.length; i++) {
             if (_exists(forSale[i])) continue;
-            r[r.length] = forSale[i];
+            r[count] = forSale[i];
+            count += 1;
         }
         return r;
     }
