@@ -17,6 +17,8 @@ contract User {
         uint256 price = meme.currentPrice();
         meme.mint{ value: price }(address(this), num);
     }
+
+    receive() external payable {}
 }
 
 contract MemeNumbersTest is DSTest {
