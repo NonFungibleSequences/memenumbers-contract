@@ -9,8 +9,13 @@ contract Meme is MemeNumbersTest {
 
     function testForSale() public {
         uint256[] memory forSale = meme.getForSale();
-
-        emit log_named_uint("forSale[0]", forSale[0]);
+        assertEq(forSale[0], 23);
+        assertEq(forSale[1], 170);
+        assertEq(forSale[2], 3925);
+        assertEq(forSale[3], 1921402);
+        assertEq(forSale[4], 7061478737);
+        assertEq(forSale[5], 18099411878749996);
+        assertEq(forSale[6], 308346800678751696249851325);
     }
 
     function testPrice() public {

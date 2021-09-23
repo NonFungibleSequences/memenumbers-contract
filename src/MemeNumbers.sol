@@ -67,13 +67,13 @@ contract MemeNumbers is ERC721, Ownable {
 
         // Slice it up with fibonacci bit masks: 5, 8, 13, 21, 34, 55, 89
         // Eligibility is confirmed during sale/view
-        forSale[0] = (entropy >> 0) ^ (2 ** 5 - 1);
-        forSale[1] = (entropy >> 5) ^ (2 ** 8 - 1);
-        forSale[2] = (entropy >> 8) ^ (2 ** 13 - 1);
-        forSale[3] = (entropy >> 13) ^ (2 ** 21 - 1);
-        forSale[4] = (entropy >> 21) ^ (2 ** 34 - 1);
-        forSale[5] = (entropy >> 34) ^ (2 ** 55 - 1);
-        forSale[6] = (entropy >> 55) ^ (2 ** 89 - 1);
+        forSale[0] = (entropy >> 0) & (2 ** 5 - 1);
+        forSale[1] = (entropy >> 5) & (2 ** 8 - 1);
+        forSale[2] = (entropy >> 8) & (2 ** 13 - 1);
+        forSale[3] = (entropy >> 13) & (2 ** 21 - 1);
+        forSale[4] = (entropy >> 21) & (2 ** 34 - 1);
+        forSale[5] = (entropy >> 34) & (2 ** 55 - 1);
+        forSale[6] = (entropy >> 55) & (2 ** 89 - 1);
     }
 
 
