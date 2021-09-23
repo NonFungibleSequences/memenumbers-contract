@@ -13,12 +13,6 @@ library Errors {
     string constant DoesNotExist = "does not exist";
 }
 
-library Util {
-    function cmp(string calldata a, string calldata b) pure public returns (bool) {
-        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
-    }
-}
-
 contract MemeNumbers is ERC721, Ownable {
     uint256 public constant AUCTION_START_PRICE = 5 ether;
     uint256 public constant AUCTION_DURATION = 1 hours;
@@ -110,16 +104,18 @@ contract MemeNumbers is ERC721, Ownable {
      * @param num2 Number to burn, must own
      */
     function operate(uint256 num1, string calldata op, uint256 num2) public pure returns (uint256) {
-        if (Util.cmp(op, "add")) {
+        // FIXME: Check over/underflows
+        bytes1 mode = bytes(op)[0];
+        if (mode == "a") { // Add
             return num1 + num2;
         }
-        if (Util.cmp(op, "sub")) {
+        if (mode == "s") { // Subtact
             return num1 - num2;
         }
-        if (Util.cmp(op, "mul")) {
+        if (mode == "m") { // Multiply
             return num1 * num2;
         }
-        if (Util.cmp(op, "div")) {
+        if (mode == "d") { // Divide
             return num1 / num2;
         }
         revert(Errors.InvalidOp);
@@ -141,6 +137,15 @@ contract MemeNumbers is ERC721, Ownable {
         // XXX: Refund difference of currentPrice vs msg.value to allow overbidding
 
         _mint(to, num);
+        _refresh();
+    }
+
+    /**
+     * @dev Refresh the auction without minting once the auction price is 0.
+     */
+    function refresh() external {
+        require(currentPrice() == 0, Errors.UnderPriced);
+        _refresh();
     }
 
     /**
