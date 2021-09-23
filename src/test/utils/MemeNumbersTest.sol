@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "ds-test/test.sol";
 
 import "../../MemeNumbers.sol";
+import "../../MemeNumbersRenderer.sol";
 import "./Hevm.sol";
 
 contract User {
@@ -23,6 +24,7 @@ contract MemeNumbersTest is DSTest {
 
     // contracts
     MemeNumbers internal meme;
+    MemeNumbersRenderer internal renderer;
 
     // users
     User internal owner;
@@ -30,12 +32,13 @@ contract MemeNumbersTest is DSTest {
     User internal bob;
 
     function setUp() public virtual {
-        hevm.roll(69);
+        renderer = new MemeNumbersRenderer();
+        meme = new MemeNumbers(address(renderer));
 
-        meme = new MemeNumbers();
         owner = new User(address(meme));
         alice = new User(address(meme));
         bob = new User(address(meme));
+
         meme.transferOwnership(address(owner));
     }
 }

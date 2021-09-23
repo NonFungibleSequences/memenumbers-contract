@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "./MemeNumbersRenderer.sol";
+
 library Errors {
     string constant AlreadyMinted = "already minted";
     string constant UnderPriced = "current price is higher than msg.value";
@@ -11,6 +13,7 @@ library Errors {
     string constant MustOwnNum = "must own number to operate on it";
     string constant InvalidOp = "invalid op";
     string constant DoesNotExist = "does not exist";
+    string constant RendererUpgradeDisabled = "renderer upgrade disabled";
 }
 
 contract MemeNumbers is ERC721, Ownable {
@@ -21,7 +24,14 @@ contract MemeNumbers is ERC721, Ownable {
     uint256 public auctionStarted;
     uint256[BATCH_SIZE] private forSale;
 
-    constructor() ERC721("MemeNumbers", "MEMENUM") {
+    /// disableRenderUpgrade is whether we can still upgrade the tokenURI renderer.
+    /// Once it is set it cannot be unset.
+    bool disableRenderUpgrade = false;
+    ITokenRenderer public renderer;
+
+    constructor(address _renderer) ERC721("MemeNumbers", "MEMENUM") {
+        renderer = ITokenRenderer(_renderer);
+
         _refresh();
     }
 
@@ -171,15 +181,23 @@ contract MemeNumbers is ERC721, Ownable {
 
     function tokenURI(uint256 tokenId) public view override(ERC721) returns (string memory) {
         require(_exists(tokenId), Errors.DoesNotExist);
-        // XXX: Implement a renderer, probably as a separate upgradeable thing
-        return "data:application/json;{}";
+        return renderer.tokenURI(IMemeNumbers(address(this)), tokenId);
     }
 
 
     // onlyOwner admin functions:
 
-    function withdraw(address payable to) external onlyOwner {
+    function adminWithdraw(address payable to) external onlyOwner {
         to.transfer(address(this).balance);
+    }
+
+    function adminSetRenderer(address _renderer) external onlyOwner {
+        require(disableRenderUpgrade == false, Errors.RendererUpgradeDisabled);
+        renderer = ITokenRenderer(_renderer);
+    }
+
+    function adminDisableRenderUpgrade() external onlyOwner {
+        disableRenderUpgrade = true;
     }
 
 }
