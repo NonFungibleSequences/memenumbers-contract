@@ -1,3 +1,11 @@
+# Setup some project vars
+ROOT_DIR := $(CURDIR)
+OUTPUT_DIR := ${ROOT_DIR}/out
+TESTNET_DIR := ${OUTPUT_DIR}/testnet
+TEST_ADDR := 0x003533CD36aC980768B510F5C57E00CE4c0229D5
+TEST_KEY := 0x9cbc61f079e82f0d9d3989a99f5cfe4aef68cbec8063b821fd41e994ea131c79 
+$(shell mkdir -p ${OUTPUT_DIR})
+
 # include .env file and export its env vars
 # (-include to ignore error if it does not exist)
 -include .env
@@ -23,8 +31,16 @@ lint   :; yarn run lint
 estimate :; ./scripts/estimate-gas.sh ${contract}
 size   :; ./scripts/contract-size.sh ${contract}
 
+testnet :; dapp testnet --dir ${TESTNET_DIR}
+
 # Deployment helpers
 deploy :; @./scripts/deploy.sh
+
+# local testnet, funding TEST_ADDR with 1000 eth
+deploy-testnet: export ETH_FROM=$(shell seth ls --keystore ${TESTNET_DIR}/8545/keystore | cut -f1)
+deploy-testnet: export ETH_RPC_ACCOUNTS=true
+deploy-testnet: deploy
+deploy-testnet :; seth send --value 1000000000000000000000 ${TEST_ADDR}
 
 # mainnet
 deploy-mainnet: export ETH_RPC_URL = $(call network,mainnet)
