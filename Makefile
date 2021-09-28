@@ -30,6 +30,7 @@ clean  :; dapp clean
 lint   :; yarn run lint
 estimate :; ./scripts/estimate-gas.sh ${contract}
 size   :; ./scripts/contract-size.sh ${contract}
+abi-out :; jq '.contracts."src/MemeNumbers.sol".MemeNumbers.abi' ./out/dapp.sol.json > ./out/MemeNumbersAbi.json
 
 testnet :; dapp testnet --dir ${TESTNET_DIR}
 
