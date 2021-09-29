@@ -32,7 +32,11 @@ estimate :; ./scripts/estimate-gas.sh ${contract}
 size   :; ./scripts/contract-size.sh ${contract}
 abi-out :; jq '.contracts."src/MemeNumbers.sol".MemeNumbers.abi' ./out/dapp.sol.json > ./out/MemeNumbersAbi.json
 
-testnet :; dapp testnet --dir ${TESTNET_DIR}
+testnet: export DAPP_TESTNET_CHAINID=1337
+testnet: export DAPP_TESTNET_PERIOD=0
+testnet:
+	rm -rf out/testnet
+	dapp testnet --dir ${TESTNET_DIR}
 
 # Deployment helpers
 deploy :; @./scripts/deploy.sh
