@@ -5,6 +5,7 @@ import "./utils/MemeNumbersTest.sol";
 import { Errors } from "../MemeNumbers.sol";
 
 contract MemeViewTests is MemeNumbersTest {
+    uint256 constant MAX_UINT = 2 ** 256 - 1;
     function testForSale() public {
         uint256[] memory forSale = meme.getForSale();
         assertEq(forSale[0], 23);
@@ -19,6 +20,20 @@ contract MemeViewTests is MemeNumbersTest {
     function testPrice() public {
         uint256 price = meme.currentPrice();
         assertEq(price, 5 ether);
+    }
+
+    function testOperate() public {
+        assertEq(meme.operate(42, "sub", 41), 1);
+        assertEq(meme.operate(2, "mul", 3), 6);
+
+        assertEq(meme.operate(10, "div", 5), 2);
+        assertEq(meme.operate(1, "div", 3), 0); // div into zero -- FIXME: Is this desirable?
+        assertEq(meme.operate(10, "div", 3), 3); // div rounding
+
+        // Overflows/underflows
+        try meme.operate(MAX_UINT, "mul", 2) { fail(); } catch Panic(uint) {} // mul overflow
+        try meme.operate(5, "sub", 6) { fail(); } catch Panic(uint) {} // sub underflow
+        try meme.operate(MAX_UINT, "add", 42) { fail(); } catch Panic(uint) {} // add overflow
     }
 }
 
