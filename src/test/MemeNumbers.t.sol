@@ -20,11 +20,14 @@ contract MemeViewTests is MemeNumbersTest {
     function testPrice() public {
         assertEq(meme.currentPrice(), 5 ether);
 
-        uint256 timeStarted = block.timestamp;
-
         hevm.warp(12 minutes); // 1/5
-
         assertEq(meme.currentPrice(), 4 ether);
+
+        hevm.warp(36 minutes);
+        assertEq(meme.currentPrice(), 2 ether);
+
+        hevm.warp(2 hours);
+        assertEq(meme.currentPrice(), 0 ether);
     }
 
     function testOperate() public {
@@ -68,6 +71,15 @@ contract MemeMintTests is MemeNumbersTest {
         uint256 price = meme.currentPrice();
         uint256[] memory forSale = meme.getForSale();
         meme.mint{ value: price }(address(this), forSale[1]);
+
+        assertEq(meme.ownerOf(forSale[1]), address(this));
+    }
+
+    function testMintFree() public {
+        hevm.warp(1 hours);
+
+        uint256[] memory forSale = meme.getForSale();
+        meme.mint{ value: 0 }(address(this), forSale[1]);
 
         assertEq(meme.ownerOf(forSale[1]), address(this));
     }
