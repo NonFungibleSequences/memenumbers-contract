@@ -4,9 +4,7 @@ pragma solidity ^0.8.0;
 import "./utils/MemeNumbersTest.sol";
 import { Errors } from "../MemeNumbers.sol";
 
-contract Meme is MemeNumbersTest {
-    // TODO: ...
-
+contract MemeState is MemeNumbersTest {
     function testForSale() public {
         uint256[] memory forSale = meme.getForSale();
         assertEq(forSale[0], 23);
@@ -21,6 +19,23 @@ contract Meme is MemeNumbersTest {
     function testPrice() public {
         uint256 price = meme.currentPrice();
         assertEq(price, 5 ether);
+    }
+}
+
+contract MemeMint is MemeNumbersTest {
+
+    receive() external payable {}
+
+    function testMintOverbid() public {
+        uint256 startingBalance = address(this).balance;
+
+        uint256 price = meme.currentPrice();
+        assertEq(price, 5 ether);
+
+        uint256[] memory forSale = meme.getForSale();
+        meme.mint{ value: 8 ether }(address(this), forSale[1]);
+
+        assertEq(address(this).balance, startingBalance - 5 ether); // X-5 despite sending 8 ether
     }
 
     function testMint() public {
