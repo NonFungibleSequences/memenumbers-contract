@@ -119,7 +119,8 @@ contract MemeNumbers is ERC721, Ownable {
 
     /**
      * @dev Apply a mathematical operation on two numbers, returning the
-     *   resulting number. Treat this as a read-only preview of `burn`.
+     *   resulting number. Treat this as a partial read-only preview of `burn`.
+     *   This preview does *not* account for the mint state of numbers.
      * @param num1 Number to burn, must own
      * @param op Operation to burn num1 and num2 with, one of: add, sub, mul, div
      * @param num2 Number to burn, must own
@@ -164,11 +165,33 @@ contract MemeNumbers is ERC721, Ownable {
             // Refund difference of currentPrice vs msg.value to allow overbidding
             payable(msg.sender).transfer(msg.value - price);
         }
-
     }
 
     /**
-     * @dev Refresh the auction without minting once the auction price is 0.
+     * @dev Mint all of the eligible numbers for sale, uses more gas than mint but you get more numbers.
+     * @param to Address to mint the numbers into.
+     *
+     * Emits a {Refresh} event.
+     */
+    function mintAll(address to) external payable {
+        uint256 price = currentPrice();
+        require(price <= msg.value, Errors.UnderPriced);
+
+        for (uint256 i=0; i<forSale.length; i++) {
+            if (_exists(forSale[i])) continue;
+            _mint(to, forSale[i]);
+        }
+
+        _refresh();
+
+        if (msg.value > price) {
+            // Refund difference of currentPrice vs msg.value to allow overbidding
+            payable(msg.sender).transfer(msg.value - price);
+        }
+    }
+
+    /**
+     * @dev Refresh the auction without minting once the auction price is 0. More gas efficient than doing a free mint.
      *
      * Emits a {Refresh} event.
      */
