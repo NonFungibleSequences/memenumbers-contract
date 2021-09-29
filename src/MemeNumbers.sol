@@ -20,6 +20,7 @@ contract MemeNumbers is ERC721, Ownable {
     uint256 public constant AUCTION_START_PRICE = 5 ether;
     uint256 public constant AUCTION_DURATION = 1 hours;
     uint256 public constant BATCH_SIZE = 7;
+    uint256 constant DECAY_RESOLUTION = 1000000000; // 1 gwei
 
     uint256 public auctionStarted;
     uint256[BATCH_SIZE] private forSale;
@@ -89,7 +90,8 @@ contract MemeNumbers is ERC721, Ownable {
         if (block.timestamp >= endTime) {
             return 0;
         }
-        return AUCTION_START_PRICE * ((endTime - block.timestamp) / AUCTION_DURATION);
+        uint256 elapsed = endTime - block.timestamp;
+        return AUCTION_START_PRICE * ((elapsed * DECAY_RESOLUTION) / AUCTION_DURATION) / DECAY_RESOLUTION; 
     }
 
     /// @dev Return whether a number is for sale and eligible

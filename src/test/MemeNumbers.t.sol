@@ -18,8 +18,13 @@ contract MemeViewTests is MemeNumbersTest {
     }
 
     function testPrice() public {
-        uint256 price = meme.currentPrice();
-        assertEq(price, 5 ether);
+        assertEq(meme.currentPrice(), 5 ether);
+
+        uint256 timeStarted = block.timestamp;
+
+        hevm.warp(12 minutes); // 1/5
+
+        assertEq(meme.currentPrice(), 4 ether);
     }
 
     function testOperate() public {
