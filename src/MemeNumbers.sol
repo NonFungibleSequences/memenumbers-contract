@@ -24,10 +24,15 @@ contract MemeNumbers is ERC721, Ownable {
     uint256 public auctionStarted;
     uint256[BATCH_SIZE] private forSale;
 
+    mapping(uint256 => bool) viaBurn; // Numbers that were created via burn
+
     /// disableRenderUpgrade is whether we can still upgrade the tokenURI renderer.
     /// Once it is set it cannot be unset.
     bool disableRenderUpgrade = false;
     ITokenRenderer public renderer;
+
+    /// @dev Emitted when the auction batch is refreshed.
+    event Refresh(); // TODO: Do we want to include any fields?
 
     constructor(address _renderer) ERC721("MemeNumbers", "MEMENUM") {
         renderer = ITokenRenderer(_renderer);
@@ -38,13 +43,8 @@ contract MemeNumbers is ERC721, Ownable {
     // Internal helpers:
 
     function _getEntropy() view internal returns(uint256) {
-        // FIXME: Are we happy with this source of entropy? Miners can
-        // influence this, but they're still required to compete in the dutch
-        // auction. Perhaps we should start the dutch auction on a very high
-        // curve to price out MEV bundles.
-
-        // Alternative option is simply:
-        //   return return uint256(blockhash(block.number));
+        // This is not ideal but it's not practical to do a real source of entropy
+        // like ChainLink with 2 LINK per refresh shuffle.
 
         // Borrowed from: https://github.com/1001-digital/erc721-extensions/blob/f5c983bac8989bc5ebf9b34c03f28e438da9a7b3/contracts/RandomlyAssigned.sol#L27
         return uint256(keccak256(
@@ -66,7 +66,8 @@ contract MemeNumbers is ERC721, Ownable {
         uint256 entropy = _getEntropy();
 
         // Slice it up with fibonacci bit masks: 5, 8, 13, 21, 34, 55, 89
-        // Eligibility is confirmed during sale/view
+        // Eligibility is confirmed during isForSale, getForSale, and mint.
+        // Eligible batches can be smaller than the forSale batch.
         forSale[0] = (entropy >> 0) & (2 ** 5 - 1);
         forSale[1] = (entropy >> 5) & (2 ** 8 - 1);
         forSale[2] = (entropy >> 8) & (2 ** 13 - 1);
@@ -74,11 +75,14 @@ contract MemeNumbers is ERC721, Ownable {
         forSale[4] = (entropy >> 21) & (2 ** 34 - 1);
         forSale[5] = (entropy >> 34) & (2 ** 55 - 1);
         forSale[6] = (entropy >> 55) & (2 ** 89 - 1);
+
+        emit Refresh();
     }
 
 
     // Public views:
 
+    /// @dev The current price of the dutch auction. Winning bids above this price will return the difference.
     function currentPrice() view public returns(uint256) {
         // Linear price reduction from AUCTION_START_PRICE to 0
         uint256 endTime = (auctionStarted + AUCTION_DURATION);
@@ -88,13 +92,15 @@ contract MemeNumbers is ERC721, Ownable {
         return AUCTION_START_PRICE * ((endTime - block.timestamp) / AUCTION_DURATION);
     }
 
+    /// @dev Return whether a number is for sale and eligible
     function isForSale(uint256 num) view public returns (bool) {
         for (uint256 i=0; i<forSale.length; i++) {
-            if (forSale[i] == num) return true;
+            if (forSale[i] == num) return !_exists(num);
         }
         return false;
     }
 
+    /// @dev Eligible numbers for sale.
     function getForSale() view public returns (uint256[] memory) {
         uint256[] memory r = new uint256[](BATCH_SIZE);
         uint256 count = 0;
@@ -104,6 +110,11 @@ contract MemeNumbers is ERC721, Ownable {
             count += 1;
         }
         return r;
+    }
+
+    /// @dev Returns whether num was minted by burning, or if it is an original from auction.
+    function isMintedByBurn(uint256 num) view external returns (bool) {
+        return viaBurn[num];
     }
 
     /**
@@ -138,20 +149,28 @@ contract MemeNumbers is ERC721, Ownable {
      * @dev Mint one of the numbers that are currently for sale at the current dutch auction price.
      * @param to Address to mint the number into.
      * @param num Number to mint, must be in the current for-sale sequence.
+     *
+     * Emits a {Refresh} event.
      */
     function mint(address to, uint256 num) external payable {
-        require(!_exists(num), Errors.AlreadyMinted);
-        require(currentPrice() <= msg.value, Errors.UnderPriced);
+        uint256 price = currentPrice();
+        require(price <= msg.value, Errors.UnderPriced);
         require(isForSale(num), Errors.NotForSale);
-
-        // XXX: Refund difference of currentPrice vs msg.value to allow overbidding
 
         _mint(to, num);
         _refresh();
+
+        if (msg.value > price) {
+            // Refund difference of currentPrice vs msg.value to allow overbidding
+            payable(msg.sender).transfer(msg.value - price);
+        }
+
     }
 
     /**
      * @dev Refresh the auction without minting once the auction price is 0.
+     *
+     * Emits a {Refresh} event.
      */
     function refresh() external {
         require(currentPrice() == 0, Errors.UnderPriced);
@@ -174,6 +193,12 @@ contract MemeNumbers is ERC721, Ownable {
         require(!_exists(num), Errors.AlreadyMinted);
 
         _mint(to, num);
+        viaBurn[num] = true;
+
+        _burn(num1);
+        _burn(num2);
+        delete viaBurn[num1];
+        delete viaBurn[num2];
     }
 
 
