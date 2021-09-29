@@ -55,9 +55,10 @@ ETH_RPC_URL=<your network> make deploy
 
 ```
 # on one terminal
-dapp testnet
+make testnet
+
 # get the printed account address from the testnet, and set it as ETH_FROM. Then:
-make deploy
+make deploy-testnet
 ```
 
 ## Installing the toolkit

@@ -4,5 +4,6 @@
 . $(dirname $0)/common.sh
 
 # Deploy.
-GreeterAddr=$(deploy Greeter)
-log "Greeter deployed at:" $GreeterAddr
+RendererAddr=$(deploy MemeNumbersRenderer)
+ContractAddr=$(deploy MemeNumbers $RendererAddr)
+log "MemeNumbers deployed at:" $ContractAddr
