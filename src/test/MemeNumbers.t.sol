@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./utils/MemeNumbersTest.sol";
 import { Errors } from "../MemeNumbers.sol";
 
-contract MemeState is MemeNumbersTest {
+contract MemeViewTests is MemeNumbersTest {
     function testForSale() public {
         uint256[] memory forSale = meme.getForSale();
         assertEq(forSale[0], 23);
@@ -22,8 +22,7 @@ contract MemeState is MemeNumbersTest {
     }
 }
 
-contract MemeMint is MemeNumbersTest {
-
+contract MemeMintTests is MemeNumbersTest {
     receive() external payable {}
 
     function testMintOverbid() public {
@@ -38,6 +37,51 @@ contract MemeMint is MemeNumbersTest {
         assertEq(address(this).balance, startingBalance - 5 ether); // X-5 despite sending 8 ether
     }
 
+    function testMintAll() public {
+        uint256 price = meme.currentPrice();
+        meme.mintAll{ value: price }(address(this));
+
+        assertEq(meme.balanceOf(address(this)), 7);
+    }
+
+    function testMint() public {
+        uint256 price = meme.currentPrice();
+        uint256[] memory forSale = meme.getForSale();
+        meme.mint{ value: price }(address(this), forSale[1]);
+
+        assertEq(meme.ownerOf(forSale[1]), address(this));
+    }
+
+}
+
+contract MemeBurnTests is MemeNumbersTest {
+    receive() external payable {}
+
+    function testAdd() public {
+        uint256 price = meme.currentPrice();
+        uint256[] memory nums = meme.getForSale();
+        meme.mintAll{ value: price }(address(this));
+
+        try meme.ownerOf(nums[1] + nums[2]) { fail(); } catch Error(string memory error) {
+            assertEq(error, "ERC721: owner query for nonexistent token");
+        }
+        meme.burn(address(this), nums[1], "add", nums[2]);
+        assertEq(meme.ownerOf(nums[1] + nums[2]), address(this));
+
+        assert(!meme.isMintedByBurn(nums[3]));
+        assert(meme.isMintedByBurn(nums[1] + nums[2]));
+    }
+
+    function testMul() public {
+        uint256 price = meme.currentPrice();
+        uint256[] memory nums = meme.getForSale();
+        meme.mintAll{ value: price }(address(this));
+        meme.burn(address(this), nums[1], "m", nums[2]);
+        assertEq(meme.ownerOf(nums[1] * nums[2]), address(this));
+    }
+}
+
+contract MemeIntegrationTests is MemeNumbersTest {
     function testMint() public {
         payable(address(alice)).transfer(100 ether);
 
@@ -51,4 +95,3 @@ contract MemeMint is MemeNumbersTest {
         assertEq(meme.ownerOf(forSale[0]), address(alice));
     }
 }
-
