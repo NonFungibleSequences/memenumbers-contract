@@ -56,7 +56,7 @@ contract MemeNumbersRenderer is ITokenRenderer {
       abi.encodePacked(
         'data:application/json;base64,',
         Base64.encode(bytes(abi.encodePacked(
-              '{"name":"MemeNumber #', tokenId.toString(), '"',
+              '{"name":"#', tokenId.toString(), '"',
               ',"description":"What is your meme number?"', // FIXME: Write something better
               ',"external_url":"https://memenumbers.com"',
               ',"image":"data:image/svg+xml;base64,', renderNFTImage(instance, tokenId), '"',
