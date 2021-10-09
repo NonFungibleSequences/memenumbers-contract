@@ -33,7 +33,7 @@ contract MemeNumbers is ERC721, Ownable {
     bool disableRenderUpgrade = false;
     ITokenRenderer public renderer;
 
-    /// @dev Emitted when the auction batch is refreshed.
+    /// @notice Emitted when the auction batch is refreshed.
     event Refresh(); // TODO: Do we want to include any fields?
 
     constructor(address _renderer) ERC721("MemeNumbers", "MEMENUM") {
@@ -60,7 +60,7 @@ contract MemeNumbers is ERC721, Ownable {
     }
 
     /**
-     * @dev Generate a fresh sequence available for sale based on the current block state.
+     * @notice Generate a fresh sequence available for sale based on the current block state.
      */
     function _refresh() internal {
         auctionStarted = block.timestamp;
@@ -84,7 +84,7 @@ contract MemeNumbers is ERC721, Ownable {
 
     // Public views:
 
-    /// @dev The current price of the dutch auction. Winning bids above this price will return the difference.
+    /// @notice The current price of the dutch auction. Winning bids above this price will return the difference.
     function currentPrice() view public returns(uint256) {
         // Linear price reduction from AUCTION_START_PRICE to 0
         uint256 endTime = (auctionStarted + AUCTION_DURATION);
@@ -95,7 +95,7 @@ contract MemeNumbers is ERC721, Ownable {
         return AUCTION_START_PRICE * ((elapsed * DECAY_RESOLUTION) / AUCTION_DURATION) / DECAY_RESOLUTION; 
     }
 
-    /// @dev Return whether a number is for sale and eligible
+    /// @notice Return whether a number is for sale and eligible
     function isForSale(uint256 num) view public returns (bool) {
         for (uint256 i=0; i<forSale.length; i++) {
             if (forSale[i] == num) return !_exists(num);
@@ -103,7 +103,7 @@ contract MemeNumbers is ERC721, Ownable {
         return false;
     }
 
-    /// @dev Eligible numbers for sale.
+    /// @notice Eligible numbers for sale.
     /// @return nums array[BATCH_SIZE] of numbers for sale, but only the first `count` are valid.
     /// @return count Length of items in nums that should be considered.
     function getForSale() view public returns (uint256[] memory nums, uint256 count) {
@@ -116,13 +116,13 @@ contract MemeNumbers is ERC721, Ownable {
         return (nums, count);
     }
 
-    /// @dev Returns whether num was minted by burning, or if it is an original from auction.
+    /// @notice Returns whether num was minted by burning, or if it is an original from auction.
     function isMintedByBurn(uint256 num) view external returns (bool) {
         return viaBurn[num];
     }
 
     /**
-     * @dev Apply a mathematical operation on two numbers, returning the
+     * @notice Apply a mathematical operation on two numbers, returning the
      *   resulting number. Treat this as a partial read-only preview of `burn`.
      *   This preview does *not* account for the mint state of numbers.
      * @param num1 Number to burn, must own
@@ -150,7 +150,7 @@ contract MemeNumbers is ERC721, Ownable {
     // Main interface:
 
     /**
-     * @dev Mint one of the numbers that are currently for sale at the current dutch auction price.
+     * @notice Mint one of the numbers that are currently for sale at the current dutch auction price.
      * @param to Address to mint the number into.
      * @param num Number to mint, must be in the current for-sale sequence.
      *
@@ -171,7 +171,7 @@ contract MemeNumbers is ERC721, Ownable {
     }
 
     /**
-     * @dev Mint all of the eligible numbers for sale, uses more gas than mint but you get more numbers.
+     * @notice Mint all of the eligible numbers for sale, uses more gas than mint but you get more numbers.
      * @param to Address to mint the numbers into.
      *
      * Emits a {Refresh} event.
@@ -194,7 +194,7 @@ contract MemeNumbers is ERC721, Ownable {
     }
 
     /**
-     * @dev Refresh the auction without minting once the auction price is 0. More gas efficient than doing a free mint.
+     * @notice Refresh the auction without minting once the auction price is 0. More gas efficient than doing a free mint.
      *
      * Emits a {Refresh} event.
      */
@@ -204,7 +204,7 @@ contract MemeNumbers is ERC721, Ownable {
     }
 
     /**
-     * @dev Burn two numbers together using a mathematical operation, producing
+     * @notice Burn two numbers together using a mathematical operation, producing
      *   a new number if it is not already taken. No minting fee required.
      * @param to Address to mint the resulting number into.
      * @param num1 Number to burn, must own
@@ -239,15 +239,19 @@ contract MemeNumbers is ERC721, Ownable {
 
     // onlyOwner admin functions:
 
+    /// @notice Withdraw contract balance.
     function adminWithdraw(address payable to) external onlyOwner {
         to.transfer(address(this).balance);
     }
 
+    /// @notice Change the tokenURI renderer.
+    /// @param _renderer Address of ITokenRenderer.
     function adminSetRenderer(address _renderer) external onlyOwner {
         require(disableRenderUpgrade == false, Errors.RendererUpgradeDisabled);
         renderer = ITokenRenderer(_renderer);
     }
 
+    /// @notice Disable upgrading the renderer. Once it is disabled, it cannot be enabled again.
     function adminDisableRenderUpgrade() external onlyOwner {
         disableRenderUpgrade = true;
     }
