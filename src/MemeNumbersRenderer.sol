@@ -45,8 +45,8 @@ contract MemeNumbersRenderer is ITokenRenderer {
           '},',
           '{',
               '"trait_type": "Parity",',
-              '"value": ', parity,
-          '},',
+              '"value": ','"',parity,'"'
+          '}',
       ']'
     ));
   }
