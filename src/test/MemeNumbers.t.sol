@@ -8,7 +8,7 @@ contract MemeViewTests is MemeNumbersTest {
     uint256 constant MAX_UINT = 2 ** 256 - 1;
 
     function testForSale() public {
-        (uint256[] memory forSale,) = meme.getForSale();
+        uint256[] memory forSale = meme.getForSale();
         assertEq(forSale[0], 87);
         assertEq(forSale[1], 682);
         assertEq(forSale[2], 12117);
@@ -17,6 +17,8 @@ contract MemeViewTests is MemeNumbersTest {
         assertEq(forSale[5], 2766511441);
         assertEq(forSale[6], 13420811902933346092);
         assertEq(forSale[7], 76233043312742894706265533);
+
+        assertEq(forSale.length, 8);
     }
 
     function testPrice() public {
@@ -56,7 +58,7 @@ contract MemeMintTests is MemeNumbersTest {
         uint256 price = meme.currentPrice();
         assertEq(price, 5 ether);
 
-        (uint256[] memory forSale,) = meme.getForSale();
+        uint256[] memory forSale = meme.getForSale();
         meme.mint{ value: 8 ether }(address(this), forSale[1]);
 
         assertEq(address(this).balance, startingBalance - 5 ether); // X-5 despite sending 8 ether
@@ -71,7 +73,7 @@ contract MemeMintTests is MemeNumbersTest {
 
     function testMint() public {
         uint256 price = meme.currentPrice();
-        (uint256[] memory forSale,) = meme.getForSale();
+        uint256[] memory forSale = meme.getForSale();
         meme.mint{ value: price }(address(this), forSale[1]);
 
         assertEq(meme.ownerOf(forSale[1]), address(this));
@@ -80,7 +82,7 @@ contract MemeMintTests is MemeNumbersTest {
     function testMintFree() public {
         hevm.warp(1 hours);
 
-        (uint256[] memory forSale,) = meme.getForSale();
+        uint256[] memory forSale = meme.getForSale();
         meme.mint{ value: 0 }(address(this), forSale[1]);
 
         assertEq(meme.ownerOf(forSale[1]), address(this));
@@ -101,7 +103,7 @@ contract MemeBurnTests is MemeNumbersTest {
 
     function testAdd() public {
         uint256 price = meme.currentPrice();
-        (uint256[] memory nums,) = meme.getForSale();
+        uint256[] memory nums = meme.getForSale();
         meme.mintAll{ value: price }(address(this));
 
         try meme.ownerOf(nums[1] + nums[2]) { fail(); } catch Error(string memory error) {
@@ -116,7 +118,7 @@ contract MemeBurnTests is MemeNumbersTest {
 
     function testMul() public {
         uint256 price = meme.currentPrice();
-        (uint256[] memory nums,) = meme.getForSale();
+        uint256[] memory nums = meme.getForSale();
         meme.mintAll{ value: price }(address(this));
         meme.burn(address(this), nums[1], "m", nums[2]);
         assertEq(meme.ownerOf(nums[1] * nums[2]), address(this));
@@ -124,7 +126,7 @@ contract MemeBurnTests is MemeNumbersTest {
 
     function testBurnSameTwice() public {
         uint256 price = meme.currentPrice();
-        (uint256[] memory nums,) = meme.getForSale();
+        uint256[] memory nums = meme.getForSale();
         meme.mintAll{ value: price }(address(this));
         try meme.burn(address(this), nums[1], "d", nums[1]) { fail(); } catch Error(string memory error) {
             assertEq(error, Errors.NoSelfBurn);
@@ -140,7 +142,7 @@ contract MemeIntegrationTests is MemeNumbersTest {
             assertEq(error, Errors.NotForSale);
         }
 
-        (uint256[] memory forSale,) = meme.getForSale();
+        uint256[] memory forSale = meme.getForSale();
         alice.mint(forSale[0]);
 
         assertEq(meme.ownerOf(forSale[0]), address(alice));

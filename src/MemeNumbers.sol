@@ -105,16 +105,23 @@ contract MemeNumbers is ERC721, Ownable {
     }
 
     /// @notice Eligible numbers for sale.
-    /// @return nums array[BATCH_SIZE] of numbers for sale, but only the first `count` are valid.
-    /// @return count Length of items in nums that should be considered.
-    function getForSale() view public returns (uint256[] memory nums, uint256 count) {
-        nums = new uint256[](BATCH_SIZE);
+    /// @return nums Array of numbers available for sale.
+    function getForSale() view external returns (uint256[] memory nums) {
+        uint256[] memory batch = new uint256[](BATCH_SIZE);
+        uint256 count = 0;
         for (uint256 i=0; i<forSale.length; i++) {
             if (_exists(forSale[i])) continue;
-            nums[count] = forSale[i];
+            batch[count] = forSale[i];
             count += 1;
         }
-        return (nums, count);
+
+        // Copy to properly-sized array
+        nums = new uint256[](count);
+        for (uint256 i=0; i<count; i++) {
+            nums[i] = batch[i];
+        }
+
+        return nums;
     }
 
     /// @notice Returns whether num was minted by burning, or if it is an original from auction.
