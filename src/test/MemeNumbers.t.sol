@@ -6,15 +6,17 @@ import { Errors } from "../MemeNumbers.sol";
 
 contract MemeViewTests is MemeNumbersTest {
     uint256 constant MAX_UINT = 2 ** 256 - 1;
+
     function testForSale() public {
         (uint256[] memory forSale,) = meme.getForSale();
-        assertEq(forSale[0], 23);
-        assertEq(forSale[1], 170);
-        assertEq(forSale[2], 3925);
-        assertEq(forSale[3], 1921402);
-        assertEq(forSale[4], 7061478737);
-        assertEq(forSale[5], 18099411878749996);
-        assertEq(forSale[6], 308346800678751696249851325);
+        assertEq(forSale[0], 87);
+        assertEq(forSale[1], 682);
+        assertEq(forSale[2], 12117);
+        assertEq(forSale[3], 143189);
+        assertEq(forSale[4], 10310010);
+        assertEq(forSale[5], 2766511441);
+        assertEq(forSale[6], 13420811902933346092);
+        assertEq(forSale[7], 76233043312742894706265533);
     }
 
     function testPrice() public {
@@ -64,7 +66,7 @@ contract MemeMintTests is MemeNumbersTest {
         uint256 price = meme.currentPrice();
         meme.mintAll{ value: price }(address(this));
 
-        assertEq(meme.balanceOf(address(this)), 7);
+        assertEq(meme.balanceOf(address(this)), 8);
     }
 
     function testMint() public {
@@ -82,6 +84,14 @@ contract MemeMintTests is MemeNumbersTest {
         meme.mint{ value: 0 }(address(this), forSale[1]);
 
         assertEq(meme.ownerOf(forSale[1]), address(this));
+    }
+
+    function testMintFreeAll() public {
+        hevm.warp(1 hours);
+
+        meme.mintAll{ value: 0 }(address(this));
+
+        assertEq(meme.balanceOf(address(this)), 8);
     }
 
 }
@@ -110,6 +120,15 @@ contract MemeBurnTests is MemeNumbersTest {
         meme.mintAll{ value: price }(address(this));
         meme.burn(address(this), nums[1], "m", nums[2]);
         assertEq(meme.ownerOf(nums[1] * nums[2]), address(this));
+    }
+
+    function testBurnSameTwice() public {
+        uint256 price = meme.currentPrice();
+        (uint256[] memory nums,) = meme.getForSale();
+        meme.mintAll{ value: price }(address(this));
+        try meme.burn(address(this), nums[1], "d", nums[1]) { fail(); } catch Error(string memory error) {
+            assertEq(error, Errors.NoSelfBurn);
+        }
     }
 }
 

@@ -20,7 +20,7 @@ library Errors {
 contract MemeNumbers is ERC721, Ownable {
     uint256 public constant AUCTION_START_PRICE = 5 ether;
     uint256 public constant AUCTION_DURATION = 1 hours;
-    uint256 public constant BATCH_SIZE = 7;
+    uint256 public constant BATCH_SIZE = 8;
     uint256 constant DECAY_RESOLUTION = 1000000000; // 1 gwei
 
     uint256 public auctionStarted;
@@ -60,23 +60,24 @@ contract MemeNumbers is ERC721, Ownable {
     }
 
     /**
-     * @notice Generate a fresh sequence available for sale based on the current block state.
+     * @dev Generate a fresh sequence available for sale based on the current block state.
      */
     function _refresh() internal {
         auctionStarted = block.timestamp;
 
         uint256 entropy = _getEntropy();
 
-        // Slice it up with fibonacci bit masks: 5, 8, 13, 21, 34, 55, 89
+        // Slice up our 256 bits of entropy into delicious bite-sized numbers.
         // Eligibility is confirmed during isForSale, getForSale, and mint.
         // Eligible batches can be smaller than the forSale batch.
-        forSale[0] = (entropy >> 0) & (2 ** 5 - 1);
-        forSale[1] = (entropy >> 5) & (2 ** 8 - 1);
-        forSale[2] = (entropy >> 8) & (2 ** 13 - 1);
-        forSale[3] = (entropy >> 13) & (2 ** 21 - 1);
-        forSale[4] = (entropy >> 21) & (2 ** 34 - 1);
-        forSale[5] = (entropy >> 34) & (2 ** 55 - 1);
-        forSale[6] = (entropy >> 55) & (2 ** 89 - 1);
+        forSale[0] = (entropy >> 0) & (2 ** 8 - 1);
+        forSale[1] = (entropy >> 5) & (2 ** 10 - 1);
+        forSale[2] = (entropy >> 8) & (2 ** 14 - 1);
+        forSale[3] = (entropy >> 8) & (2 ** 18 - 1);
+        forSale[4] = (entropy >> 13) & (2 ** 24 - 1);
+        forSale[5] = (entropy >> 21) & (2 ** 32 - 1);
+        forSale[6] = (entropy >> 34) & (2 ** 64 - 1);
+        forSale[7] = (entropy >> 55) & (2 ** 86 - 1);
 
         emit Refresh();
     }
