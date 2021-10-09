@@ -11,6 +11,7 @@ library Errors {
     string constant UnderPriced = "current price is higher than msg.value";
     string constant NotForSale = "number is not for sale in this batch";
     string constant MustOwnNum = "must own number to operate on it";
+    string constant NoSelfBurn = "burn numbers must be different";
     string constant InvalidOp = "invalid op";
     string constant DoesNotExist = "does not exist";
     string constant RendererUpgradeDisabled = "renderer upgrade disabled";
@@ -103,15 +104,16 @@ contract MemeNumbers is ERC721, Ownable {
     }
 
     /// @dev Eligible numbers for sale.
-    function getForSale() view public returns (uint256[] memory) {
-        uint256[] memory r = new uint256[](BATCH_SIZE);
-        uint256 count = 0;
+    /// @return nums array[BATCH_SIZE] of numbers for sale, but only the first `count` are valid.
+    /// @return count Length of items in nums that should be considered.
+    function getForSale() view public returns (uint256[] memory nums, uint256 count) {
+        nums = new uint256[](BATCH_SIZE);
         for (uint256 i=0; i<forSale.length; i++) {
             if (_exists(forSale[i])) continue;
-            r[count] = forSale[i];
+            nums[count] = forSale[i];
             count += 1;
         }
-        return r;
+        return (nums, count);
     }
 
     /// @dev Returns whether num was minted by burning, or if it is an original from auction.
@@ -128,7 +130,6 @@ contract MemeNumbers is ERC721, Ownable {
      * @param num2 Number to burn, must own
      */
     function operate(uint256 num1, string calldata op, uint256 num2) public pure returns (uint256) {
-        // FIXME: Check over/underflows
         bytes1 mode = bytes(op)[0];
         if (mode == "a") { // Add
             return num1 + num2;
@@ -211,6 +212,7 @@ contract MemeNumbers is ERC721, Ownable {
      * @param num2 Number to burn, must own
      */
     function burn(address to, uint256 num1, string calldata op, uint256 num2) external {
+        require(num1 != num2, Errors.NoSelfBurn);
         require(ownerOf(num1) == _msgSender(), Errors.MustOwnNum);
         require(ownerOf(num2) == _msgSender(), Errors.MustOwnNum);
 
