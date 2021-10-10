@@ -17,7 +17,7 @@ contract MemeNumbersRenderer is ITokenRenderer {
 
   function renderNFTImage(IMemeNumbers instance, uint256 tokenId) public view returns (string memory) {
     return Base64.encode(bytes(abi.encodePacked(
-      '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidyMid meet" viewBox="0 0 400 400" style="background:#00000">',
+      '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidyMid meet" viewBox="0 0 400 400" style="background:black">',
         '<text x="200" y="200" style="text-anchor:middle;dominant-baseline:middle;fill:white;font-size:24px;">',
           tokenId.toString(),
         '</text>',
@@ -56,7 +56,7 @@ contract MemeNumbersRenderer is ITokenRenderer {
       abi.encodePacked(
         'data:application/json;base64,',
         Base64.encode(bytes(abi.encodePacked(
-              '{"name":"#', tokenId.toString(), '"',
+              '{"name":"', tokenId.toString(), '"',
               ',"description":"What is your meme number?"', // FIXME: Write something better
               ',"external_url":"https://memenumbers.com"',
               ',"image":"data:image/svg+xml;base64,', renderNFTImage(instance, tokenId), '"',
