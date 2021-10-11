@@ -23,3 +23,8 @@ if [[ ! "$ContractAddr" ]]; then
 else
   log "MemeNumbers already deployed, skipping: $ContractAddr"
 fi
+
+if [[ "$UPGRADE_RENDERER" ]]; then
+  echo "Upgrading renderer..."
+  seth send $ContractAddr 'adminSetRenderer(address)' $RendererAddr
+fi

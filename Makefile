@@ -39,7 +39,8 @@ testnet:
 	dapp testnet --dir ${TESTNET_DIR}
 
 # Deployment helpers
-deploy :; @./scripts/deploy.sh
+deploy: test
+deploy:; @./scripts/deploy.sh
 
 # local testnet, funding TEST_ADDR with 1000 eth
 deploy-testnet: export ETH_FROM=$(shell seth ls --keystore ${TESTNET_DIR}/8545/keystore | cut -f1)
