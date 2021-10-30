@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 # Utility for running a temporary dapp testnet w/ an ephemeral account
 # to be used for deployment tests
 
@@ -7,7 +9,7 @@
 export TMPDIR=$(mktemp -d)
 
 # clean up
-trap 'killall geth && rm -rf "$TMPDIR"' EXIT
+trap 'killall geth && sleep 3 && rm -rf "$TMPDIR"' EXIT
 trap "exit 1" SIGINT SIGTERM
 
 # test helper
