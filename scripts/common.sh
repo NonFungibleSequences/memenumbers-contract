@@ -68,8 +68,13 @@ deploy() {
 	# get the bytecode from the compiled file
 	BYTECODE=0x$(jq -r "$PATTERN.evm.bytecode.object" out/dapp.sol.json)
 
+	OLD_GAS_PRICE=$ETH_GAS_PRICE # Save old gas price
+	ETH_GAS_PRICE=
+
 	# estimate gas
 	GAS=$(seth estimate --create "$BYTECODE" "$SIG" $ARGS --rpc-url "$ETH_RPC_URL")
+
+	ETH_GAS_PRICE=$OLD_GAS_PRICE
 
 	# deploy
 	ADDRESS=$(dapp create "$NAME" $ARGS -- --gas "$GAS" --rpc-url "$ETH_RPC_URL")
@@ -106,7 +111,10 @@ estimate_gas() {
 	# get the bytecode from the compiled file
 	BYTECODE=0x$(jq -r "$PATTERN.evm.bytecode.object" out/dapp.sol.json)
 	# estimate gas
+	OLD_GAS_PRICE=$ETH_GAS_PRICE # Save old gas price
+	ETH_GAS_PRICE=
 	GAS=$(seth estimate --create "$BYTECODE" "$SIG" $ARGS --rpc-url "$ETH_RPC_URL")
+	ETH_GAS_PRICE=$OLD_GAS_PRICE
 
 	TXPRICE_RESPONSE=$(curl -sL https://api.txprice.com/v1)
 	response=$(jq '.code' <<<"$TXPRICE_RESPONSE")
