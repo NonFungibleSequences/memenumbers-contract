@@ -3,7 +3,7 @@ let
   pkgs = import (builtins.fetchGit rec {
     name = "dapptools-${rev}";
     url = https://github.com/dapphub/dapptools;
-    rev = "0bccaa359e082fef842c3790cdec91dbdf17bf11"; # master @ 2021-09-12
+    rev = "d7a23096d8ae8391e740f6bdc4e8b9b703ca4764"; # master @ 2021-10-30
   }) {};
 
 in
@@ -15,6 +15,7 @@ in
       pkgs.seth
       pkgs.go-ethereum-unlimited
       pkgs.hevm
+      pkgs.ethsign
 
       nodePackages.yarn
     ];

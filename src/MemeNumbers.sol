@@ -4,104 +4,151 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "./MemeNumbersRenderer.sol";
+
 library Errors {
     string constant AlreadyMinted = "already minted";
     string constant UnderPriced = "current price is higher than msg.value";
     string constant NotForSale = "number is not for sale in this batch";
     string constant MustOwnNum = "must own number to operate on it";
+    string constant NoSelfBurn = "burn numbers must be different";
     string constant InvalidOp = "invalid op";
     string constant DoesNotExist = "does not exist";
-}
-
-library Util {
-    function cmp(string calldata a, string calldata b) pure public returns (bool) {
-        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
-    }
+    string constant RendererUpgradeDisabled = "renderer upgrade disabled";
 }
 
 contract MemeNumbers is ERC721, Ownable {
-    uint256 constant AUCTION_START_PRICE = 1 ether;
-    uint256 constant AUCTION_DURATION = 2 hours;
-    uint256 constant BATCH_SIZE = 7;
+    uint256 public constant AUCTION_START_PRICE = 5 ether;
+    uint256 public constant AUCTION_DURATION = 1 hours;
+    uint256 public constant BATCH_SIZE = 8;
+    uint256 constant DECAY_RESOLUTION = 1000000000; // 1 gwei
 
     uint256 public auctionStarted;
     uint256[BATCH_SIZE] private forSale;
 
-    constructor() ERC721("MemeNumbers", "MEMENUM") {
-        refresh();
+    mapping(uint256 => bool) viaBurn; // Numbers that were created via burn
+
+    /// disableRenderUpgrade is whether we can still upgrade the tokenURI renderer.
+    /// Once it is set it cannot be unset.
+    bool disableRenderUpgrade = false;
+    ITokenRenderer public renderer;
+
+    /// @notice Emitted when the auction batch is refreshed.
+    event Refresh(); // TODO: Do we want to include any fields?
+
+    constructor(address _renderer) ERC721("MemeNumbers", "MEMENUM") {
+        renderer = ITokenRenderer(_renderer);
+
+        _refresh();
     }
 
-    // Private helpers:
+    // Internal helpers:
+
+    function _getEntropy() view internal returns(uint256) {
+        // This is not ideal but it's not practical to do a real source of entropy
+        // like ChainLink with 2 LINK per refresh shuffle.
+
+        // Borrowed from: https://github.com/1001-digital/erc721-extensions/blob/f5c983bac8989bc5ebf9b34c03f28e438da9a7b3/contracts/RandomlyAssigned.sol#L27
+        return uint256(keccak256(
+            abi.encodePacked(
+                msg.sender,
+                block.coinbase,
+                block.difficulty,
+                block.gaslimit,
+                block.timestamp,
+                blockhash(block.number))));
+    }
 
     /**
      * @dev Generate a fresh sequence available for sale based on the current block state.
      */
-    function refresh() private {
+    function _refresh() internal {
         auctionStarted = block.timestamp;
 
-        // FIXME: Are we happy with this source of entropy? Miners can
-        // influence this, but they're still required to compete in the dutch
-        // auction. Perhaps we should start the dutch auction on a very high
-        // curve to price out MEV bundles.
-        uint256 entropy = uint256(blockhash(block.number));
+        uint256 entropy = _getEntropy();
 
-        // Slice it up with fibonacci bit masks: 5, 8, 13, 21, 34, 55, 89
-        // Eligibility is confirmed during sale/view
-        forSale[0] = entropy ^ (2 ** 5 - 1);
-        forSale[1] = entropy ^ (2 ** 8 - 1);
-        forSale[2] = entropy ^ (2 ** 13 - 1);
-        forSale[3] = entropy ^ (2 ** 21 - 1);
-        forSale[4] = entropy ^ (2 ** 34 - 1);
-        forSale[5] = entropy ^ (2 ** 55 - 1);
-        forSale[6] = entropy ^ (2 ** 89 - 1);
+        // Slice up our 256 bits of entropy into delicious bite-sized numbers.
+        // Eligibility is confirmed during isForSale, getForSale, and mint.
+        // Eligible batches can be smaller than the forSale batch.
+        forSale[0] = (entropy >> 0) & (2 ** 8 - 1);
+        forSale[1] = (entropy >> 5) & (2 ** 10 - 1);
+        forSale[2] = (entropy >> 8) & (2 ** 14 - 1);
+        forSale[3] = (entropy >> 8) & (2 ** 18 - 1);
+        forSale[4] = (entropy >> 13) & (2 ** 24 - 1);
+        forSale[5] = (entropy >> 21) & (2 ** 32 - 1);
+        forSale[6] = (entropy >> 34) & (2 ** 64 - 1);
+        forSale[7] = (entropy >> 55) & (2 ** 86 - 1);
+
+        emit Refresh();
     }
 
 
     // Public views:
 
+    /// @notice The current price of the dutch auction. Winning bids above this price will return the difference.
     function currentPrice() view public returns(uint256) {
         // Linear price reduction from AUCTION_START_PRICE to 0
         uint256 endTime = (auctionStarted + AUCTION_DURATION);
         if (block.timestamp >= endTime) {
             return 0;
         }
-        return AUCTION_START_PRICE * ((block.timestamp - endTime) / AUCTION_DURATION);
+        uint256 elapsed = endTime - block.timestamp;
+        return AUCTION_START_PRICE * ((elapsed * DECAY_RESOLUTION) / AUCTION_DURATION) / DECAY_RESOLUTION; 
     }
 
+    /// @notice Return whether a number is for sale and eligible
     function isForSale(uint256 num) view public returns (bool) {
         for (uint256 i=0; i<forSale.length; i++) {
-            if (forSale[i] == num) return true;
+            if (forSale[i] == num) return !_exists(num);
         }
         return false;
     }
 
-    function getForSale() view public returns (uint256[] memory) {
-        uint256[] memory r;
+    /// @notice Eligible numbers for sale.
+    /// @return nums Array of numbers available for sale.
+    function getForSale() view external returns (uint256[] memory nums) {
+        uint256[] memory batch = new uint256[](BATCH_SIZE);
+        uint256 count = 0;
         for (uint256 i=0; i<forSale.length; i++) {
             if (_exists(forSale[i])) continue;
-            r[r.length] = forSale[i];
+            batch[count] = forSale[i];
+            count += 1;
         }
-        return r;
+
+        // Copy to properly-sized array
+        nums = new uint256[](count);
+        for (uint256 i=0; i<count; i++) {
+            nums[i] = batch[i];
+        }
+
+        return nums;
+    }
+
+    /// @notice Returns whether num was minted by burning, or if it is an original from auction.
+    function isMintedByBurn(uint256 num) view external returns (bool) {
+        return viaBurn[num];
     }
 
     /**
-     * @dev Apply a mathematical operation on two numbers, returning the
-     *   resulting number. Treat this as a read-only preview of `burn`.
+     * @notice Apply a mathematical operation on two numbers, returning the
+     *   resulting number. Treat this as a partial read-only preview of `burn`.
+     *   This preview does *not* account for the mint state of numbers.
      * @param num1 Number to burn, must own
      * @param op Operation to burn num1 and num2 with, one of: add, sub, mul, div
      * @param num2 Number to burn, must own
      */
     function operate(uint256 num1, string calldata op, uint256 num2) public pure returns (uint256) {
-        if (Util.cmp(op, "add")) {
+        bytes1 mode = bytes(op)[0];
+        if (mode == "a") { // Add
             return num1 + num2;
         }
-        if (Util.cmp(op, "sub")) {
+        if (mode == "s") { // Subtact
             return num1 - num2;
         }
-        if (Util.cmp(op, "mul")) {
+        if (mode == "m") { // Multiply
             return num1 * num2;
         }
-        if (Util.cmp(op, "div")) {
+        if (mode == "d") { // Divide
             return num1 / num2;
         }
         revert(Errors.InvalidOp);
@@ -111,20 +158,61 @@ contract MemeNumbers is ERC721, Ownable {
     // Main interface:
 
     /**
-     * @dev Mint one of the numbers that are currently for sale at the current dutch auction price.
+     * @notice Mint one of the numbers that are currently for sale at the current dutch auction price.
      * @param to Address to mint the number into.
      * @param num Number to mint, must be in the current for-sale sequence.
+     *
+     * Emits a {Refresh} event.
      */
     function mint(address to, uint256 num) external payable {
-        require(!_exists(num), Errors.AlreadyMinted);
-        require(currentPrice() <= msg.value, Errors.UnderPriced);
+        uint256 price = currentPrice();
+        require(price <= msg.value, Errors.UnderPriced);
         require(isForSale(num), Errors.NotForSale);
 
         _mint(to, num);
+        _refresh();
+
+        if (msg.value > price) {
+            // Refund difference of currentPrice vs msg.value to allow overbidding
+            payable(msg.sender).transfer(msg.value - price);
+        }
     }
 
     /**
-     * @dev Burn two numbers together using a mathematical operation, producing
+     * @notice Mint all of the eligible numbers for sale, uses more gas than mint but you get more numbers.
+     * @param to Address to mint the numbers into.
+     *
+     * Emits a {Refresh} event.
+     */
+    function mintAll(address to) external payable {
+        uint256 price = currentPrice();
+        require(price <= msg.value, Errors.UnderPriced);
+
+        for (uint256 i=0; i<forSale.length; i++) {
+            if (_exists(forSale[i])) continue;
+            _mint(to, forSale[i]);
+        }
+
+        _refresh();
+
+        if (msg.value > price) {
+            // Refund difference of currentPrice vs msg.value to allow overbidding
+            payable(msg.sender).transfer(msg.value - price);
+        }
+    }
+
+    /**
+     * @notice Refresh the auction without minting once the auction price is 0. More gas efficient than doing a free mint.
+     *
+     * Emits a {Refresh} event.
+     */
+    function refresh() external {
+        require(currentPrice() == 0, Errors.UnderPriced);
+        _refresh();
+    }
+
+    /**
+     * @notice Burn two numbers together using a mathematical operation, producing
      *   a new number if it is not already taken. No minting fee required.
      * @param to Address to mint the resulting number into.
      * @param num1 Number to burn, must own
@@ -132,6 +220,7 @@ contract MemeNumbers is ERC721, Ownable {
      * @param num2 Number to burn, must own
      */
     function burn(address to, uint256 num1, string calldata op, uint256 num2) external {
+        require(num1 != num2, Errors.NoSelfBurn);
         require(ownerOf(num1) == _msgSender(), Errors.MustOwnNum);
         require(ownerOf(num2) == _msgSender(), Errors.MustOwnNum);
 
@@ -139,6 +228,12 @@ contract MemeNumbers is ERC721, Ownable {
         require(!_exists(num), Errors.AlreadyMinted);
 
         _mint(to, num);
+        viaBurn[num] = true;
+
+        _burn(num1);
+        _burn(num2);
+        delete viaBurn[num1];
+        delete viaBurn[num2];
     }
 
 
@@ -146,15 +241,27 @@ contract MemeNumbers is ERC721, Ownable {
 
     function tokenURI(uint256 tokenId) public view override(ERC721) returns (string memory) {
         require(_exists(tokenId), Errors.DoesNotExist);
-        // XXX: Implement a renderer, probably as a separate upgradeable thing
-        return "data:application/json;{}";
+        return renderer.tokenURI(IMemeNumbers(address(this)), tokenId);
     }
 
 
     // onlyOwner admin functions:
 
-    function withdraw(address payable to) external onlyOwner {
+    /// @notice Withdraw contract balance.
+    function adminWithdraw(address payable to) external onlyOwner {
         to.transfer(address(this).balance);
+    }
+
+    /// @notice Change the tokenURI renderer.
+    /// @param _renderer Address of ITokenRenderer.
+    function adminSetRenderer(address _renderer) external onlyOwner {
+        require(disableRenderUpgrade == false, Errors.RendererUpgradeDisabled);
+        renderer = ITokenRenderer(_renderer);
+    }
+
+    /// @notice Disable upgrading the renderer. Once it is disabled, it cannot be enabled again.
+    function adminDisableRenderUpgrade() external onlyOwner {
+        disableRenderUpgrade = true;
     }
 
 }

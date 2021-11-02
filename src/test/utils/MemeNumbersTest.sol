@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "ds-test/test.sol";
 
 import "../../MemeNumbers.sol";
+import "../../MemeNumbersRenderer.sol";
 import "./Hevm.sol";
 
 contract User {
@@ -13,8 +14,11 @@ contract User {
     }
 
     function mint(uint256 num) public {
-        meme.mint(address(this), num);
+        uint256 price = meme.currentPrice();
+        meme.mint{ value: price }(address(this), num);
     }
+
+    receive() external payable {}
 }
 
 contract MemeNumbersTest is DSTest {
@@ -22,15 +26,21 @@ contract MemeNumbersTest is DSTest {
 
     // contracts
     MemeNumbers internal meme;
+    MemeNumbersRenderer internal renderer;
 
     // users
     User internal owner;
     User internal alice;
+    User internal bob;
 
     function setUp() public virtual {
-        meme = new MemeNumbers();
+        renderer = new MemeNumbersRenderer();
+        meme = new MemeNumbers(address(renderer));
+
         owner = new User(address(meme));
         alice = new User(address(meme));
+        bob = new User(address(meme));
+
         meme.transferOwnership(address(owner));
     }
 }
